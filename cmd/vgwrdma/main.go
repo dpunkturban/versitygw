@@ -23,6 +23,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/urfave/cli/v2"
@@ -67,6 +68,7 @@ var (
 	virtualDomain                          string
 	debug                                  bool
 	keepAlive                              bool
+	shutdownTimeout                        time.Duration
 	pprof                                  string
 	quiet                                  bool
 	readonly                               bool
@@ -487,6 +489,14 @@ func initFlags() []cli.Flag {
 			Usage:       "enable keep-alive connections",
 			EnvVars:     []string{"VGW_KEEP_ALIVE"},
 			Destination: &keepAlive,
+		},
+		&cli.DurationFlag{
+			Name: "shutdown-timeout",
+			Usage: "how long to wait for in-flight requests to finish on shutdown " +
+				"before their backend work is canceled (e.g. 60s)",
+			Value:       10 * time.Second,
+			EnvVars:     []string{"VGW_SHUTDOWN_TIMEOUT"},
+			Destination: &shutdownTimeout,
 		},
 		&cli.BoolFlag{
 			Name:        "quiet",
@@ -1178,6 +1188,7 @@ func runGateway(ctx context.Context, be backend.Backend) error {
 		Quiet:                       quiet,
 		Readonly:                    readonly,
 		KeepAlive:                   keepAlive,
+		ShutdownTimeout:             shutdownTimeout,
 		DisableACLs:                 disableACLs,
 		DisableStrictBucketNames:    gwcli.DisableStrictBucketNames,
 		VirtualDomain:               virtualDomain,
