@@ -155,14 +155,14 @@ func (c AdminController) ChangeBucketOwner(ctx fiber.Ctx) (*Response, error) {
 		}, s3err.GetAPIError(s3err.ErrAdminUserNotFound)
 	}
 
-	err = c.be.ChangeBucketOwner(ctx.RequestCtx(), bucket, owner)
+	err = c.be.ChangeBucketOwner(ctx.Context(), bucket, owner)
 	return &Response{
 		MetaOpts: &MetaOptions{},
 	}, err
 }
 
 func (c AdminController) ListBuckets(ctx fiber.Ctx) (*Response, error) {
-	buckets, err := c.be.ListBucketsAndOwners(ctx.RequestCtx())
+	buckets, err := c.be.ListBucketsAndOwners(ctx.Context())
 	return &Response{
 		Data: s3response.ListBucketsResult{
 			Buckets: buckets,

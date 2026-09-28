@@ -19,9 +19,10 @@ package cumiddleware
 // them as fasthttp user-values so the backend can detect RDMA-accelerated
 // requests.
 //
-// Important: versitygw passes ctx.RequestCtx() (*fasthttp.RequestCtx) to the
-// backend, not the fiber.Ctx or any context.WithValue wrapper. Values must
-// therefore be stored via RequestCtx.SetUserValue (string key) so that
+// Important: the context versitygw passes to the backend reads its values
+// from the fasthttp request (see utils.RequestContext), not from the
+// fiber.Ctx or any context.WithValue wrapper. Values must therefore be
+// stored via RequestCtx.SetUserValue (string key) so that
 // context.Context.Value(stringKey) retrieves them correctly.
 
 import (
@@ -32,7 +33,6 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/valyala/fasthttp"
 
 	"github.com/versity/versitygw/s3api/utils"
 	"github.com/versity/versitygw/s3err"
@@ -101,8 +101,8 @@ func CuObjMiddleware(ctx fiber.Ctx) error {
 		return ctx.Next()
 	}
 
-	// Store directly on the underlying fasthttp RequestCtx so values survive
-	// the ctx.RequestCtx() call the versitygw controller uses to invoke the backend.
+	// Store directly on the underlying fasthttp RequestCtx so the context
+	// the versitygw controller hands to the backend finds them.
 	rctx := ctx.RequestCtx()
 
 	// The descriptor
@@ -237,10 +237,11 @@ func GetRDMARemoteStart(ctx context.Context) uint64 {
 // HeaderRDMABytesTransferred (byte count) response headers, signaling to the
 // client that the transfer was completed via RDMA rather than the HTTP body.
 // Call only after the RDMA transfer has actually succeeded. ctx must be the
-// same *fasthttp.RequestCtx handed to the backend by versitygw; it is a no-op
-// otherwise (e.g. in unit tests without an HTTP layer).
+// context handed to the backend by versitygw, or the *fasthttp.RequestCtx
+// behind it; it is a no-op otherwise (e.g. in unit tests without an HTTP
+// layer).
 func SetRDMAReplyHeader(ctx context.Context, rdmaStatus int, transferredBytes int64) {
-	rctx, ok := ctx.(*fasthttp.RequestCtx)
+	rctx, ok := utils.FastHTTPRequestCtx(ctx)
 	if !ok {
 		return
 	}

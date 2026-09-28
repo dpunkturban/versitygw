@@ -54,7 +54,7 @@ func ApplyBucketCORS(be backend.Backend, resolveBucket BucketResolver, fallbackO
 		}
 
 		// if bucket cors is not set, skip the check
-		data, err := be.GetBucketCors(ctx.RequestCtx(), bucket)
+		data, err := be.GetBucketCors(ctx.Context(), bucket)
 		if err != nil {
 			// If CORS is not configured, S3Error will have code NoSuchCORSConfiguration.
 			// In this case, we can safely continue. For any other error, we should log it.

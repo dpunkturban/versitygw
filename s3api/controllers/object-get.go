@@ -71,7 +71,7 @@ func (c S3ApiController) GetObjectTagging(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetObjectTagging(ctx.RequestCtx(), bucket, key, versionId)
+	data, err := c.be.GetObjectTagging(ctx.Context(), bucket, key, versionId)
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -135,7 +135,7 @@ func (c S3ApiController) GetObjectRetention(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetObjectRetention(ctx.RequestCtx(), bucket, key, versionId)
+	data, err := c.be.GetObjectRetention(ctx.Context(), bucket, key, versionId)
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -189,7 +189,7 @@ func (c S3ApiController) GetObjectLegalHold(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetObjectLegalHold(ctx.RequestCtx(), bucket, key, versionId)
+	data, err := c.be.GetObjectLegalHold(ctx.Context(), bucket, key, versionId)
 	return &Response{
 		Data: auth.ParseObjectLegalHoldOutput(data),
 		MetaOpts: &MetaOptions{
@@ -224,7 +224,7 @@ func (c S3ApiController) GetObjectAcl(ctx fiber.Ctx) (*Response, error) {
 			},
 		}, err
 	}
-	res, err := c.be.GetObjectAcl(ctx.RequestCtx(), &s3.GetObjectAclInput{
+	res, err := c.be.GetObjectAcl(ctx.Context(), &s3.GetObjectAclInput{
 		Bucket: &bucket,
 		Key:    &key,
 	})
@@ -286,7 +286,7 @@ func (c S3ApiController) ListParts(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	res, err := c.be.ListParts(ctx.RequestCtx(), &s3.ListPartsInput{
+	res, err := c.be.ListParts(ctx.Context(), &s3.ListPartsInput{
 		Bucket:           &bucket,
 		Key:              &key,
 		UploadId:         &uploadId,
@@ -361,7 +361,7 @@ func (c S3ApiController) GetObjectAttributes(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	res, err := c.be.GetObjectAttributes(ctx.RequestCtx(),
+	res, err := c.be.GetObjectAttributes(ctx.Context(),
 		&s3.GetObjectAttributesInput{
 			Bucket:           &bucket,
 			Key:              &key,
@@ -510,7 +510,7 @@ func (c S3ApiController) GetObject(ctx fiber.Ctx) (*Response, error) {
 
 	conditionalHeaders := utils.ParsePreconditionHeaders(ctx)
 
-	res, err := c.be.GetObject(ctx.RequestCtx(), &s3.GetObjectInput{
+	res, err := c.be.GetObject(ctx.Context(), &s3.GetObjectInput{
 		Bucket:            &bucket,
 		Key:               &key,
 		Range:             &acceptRange,

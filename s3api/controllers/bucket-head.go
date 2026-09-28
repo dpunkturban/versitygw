@@ -53,7 +53,7 @@ func (c S3ApiController) HeadBucket(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	_, err = c.be.HeadBucket(ctx.RequestCtx(),
+	_, err = c.be.HeadBucket(ctx.Context(),
 		&s3.HeadBucketInput{
 			Bucket: &bucket,
 		})

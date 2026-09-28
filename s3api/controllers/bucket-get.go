@@ -49,7 +49,7 @@ func (c S3ApiController) GetBucketTagging(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	tags, err := c.be.GetBucketTagging(ctx.RequestCtx(), bucket)
+	tags, err := c.be.GetBucketTagging(ctx.Context(), bucket)
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -100,7 +100,7 @@ func (c S3ApiController) GetBucketOwnershipControls(ctx fiber.Ctx) (*Response, e
 		}, err
 	}
 
-	data, err := c.be.GetBucketOwnershipControls(ctx.RequestCtx(), bucket)
+	data, err := c.be.GetBucketOwnershipControls(ctx.Context(), bucket)
 	return &Response{
 		Data: s3response.OwnershipControls{
 			Rules: []types.OwnershipControlsRule{
@@ -139,7 +139,7 @@ func (c S3ApiController) GetBucketVersioning(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetBucketVersioning(ctx.RequestCtx(), bucket)
+	data, err := c.be.GetBucketVersioning(ctx.Context(), bucket)
 	return &Response{
 		Data: data,
 		MetaOpts: &MetaOptions{
@@ -172,7 +172,7 @@ func (c S3ApiController) GetBucketCors(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetBucketCors(ctx.RequestCtx(), bucket)
+	data, err := c.be.GetBucketCors(ctx.Context(), bucket)
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -214,7 +214,7 @@ func (c S3ApiController) GetBucketWebsite(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetBucketWebsite(ctx.RequestCtx(), bucket)
+	data, err := c.be.GetBucketWebsite(ctx.Context(), bucket)
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -256,7 +256,7 @@ func (c S3ApiController) GetBucketPolicy(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetBucketPolicy(ctx.RequestCtx(), bucket)
+	data, err := c.be.GetBucketPolicy(ctx.Context(), bucket)
 	return &Response{
 		Data: data,
 		MetaOpts: &MetaOptions{
@@ -289,7 +289,7 @@ func (c S3ApiController) GetBucketPolicyStatus(ctx fiber.Ctx) (*Response, error)
 		}, err
 	}
 
-	policyRaw, err := c.be.GetBucketPolicy(ctx.RequestCtx(), bucket)
+	policyRaw, err := c.be.GetBucketPolicy(ctx.Context(), bucket)
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -358,7 +358,7 @@ func (c S3ApiController) ListObjectVersions(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.ListObjectVersions(ctx.RequestCtx(),
+	data, err := c.be.ListObjectVersions(ctx.Context(),
 		&s3.ListObjectVersionsInput{
 			Bucket:          &bucket,
 			Delimiter:       &delimiter,
@@ -401,7 +401,7 @@ func (c S3ApiController) GetObjectLockConfiguration(ctx fiber.Ctx) (*Response, e
 		}, err
 	}
 
-	data, err := c.be.GetObjectLockConfiguration(ctx.RequestCtx(), bucket)
+	data, err := c.be.GetObjectLockConfiguration(ctx.Context(), bucket)
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -445,7 +445,7 @@ func (c S3ApiController) GetBucketAcl(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	data, err := c.be.GetBucketAcl(ctx.RequestCtx(),
+	data, err := c.be.GetBucketAcl(ctx.Context(),
 		&s3.GetBucketAclInput{Bucket: &bucket})
 	if err != nil {
 		return &Response{
@@ -502,7 +502,7 @@ func (c S3ApiController) ListMultipartUploads(ctx fiber.Ctx) (*Response, error) 
 			},
 		}, err
 	}
-	res, err := c.be.ListMultipartUploads(ctx.RequestCtx(),
+	res, err := c.be.ListMultipartUploads(ctx.Context(),
 		&s3.ListMultipartUploadsInput{
 			Bucket:         &bucket,
 			Delimiter:      &delimiter,
@@ -563,7 +563,7 @@ func (c S3ApiController) ListObjectsV2(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	res, err := c.be.ListObjectsV2(ctx.RequestCtx(),
+	res, err := c.be.ListObjectsV2(ctx.Context(),
 		&s3.ListObjectsV2Input{
 			Bucket:            &bucket,
 			Prefix:            &prefix,
@@ -635,7 +635,7 @@ func (c S3ApiController) ListObjects(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	res, err := c.be.ListObjects(ctx.RequestCtx(),
+	res, err := c.be.ListObjects(ctx.Context(),
 		&s3.ListObjectsInput{
 			Bucket:    &bucket,
 			Prefix:    &prefix,
@@ -696,7 +696,7 @@ func (c S3ApiController) GetBucketLocation(ctx fiber.Ctx) (*Response, error) {
 	}
 
 	// verify bucket existence/access via backend HeadBucket
-	_, err = c.be.HeadBucket(ctx.RequestCtx(), &s3.HeadBucketInput{Bucket: &bucket})
+	_, err = c.be.HeadBucket(ctx.Context(), &s3.HeadBucketInput{Bucket: &bucket})
 	if err != nil {
 		return &Response{
 			MetaOpts: &MetaOptions{

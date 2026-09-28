@@ -120,7 +120,7 @@ func (c S3ApiController) DeleteObjects(ctx fiber.Ctx) (*Response, error) {
 
 	var backendResult s3response.DeleteResult
 	if len(toDelete) > 0 {
-		backendResult, err = c.be.DeleteObjects(ctx.RequestCtx(),
+		backendResult, err = c.be.DeleteObjects(ctx.Context(),
 			&s3.DeleteObjectsInput{
 				Bucket: &bucket,
 				Delete: &types.Delete{
@@ -267,7 +267,7 @@ func (c S3ApiController) POSTObject(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	res, err := c.be.PutObject(ctx.RequestCtx(), s3response.PutObjectInput{
+	res, err := c.be.PutObject(ctx.Context(), s3response.PutObjectInput{
 		Bucket:                  &bucket,
 		Key:                     &key,
 		ContentType:             &contentType,

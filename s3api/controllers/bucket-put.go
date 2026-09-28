@@ -63,7 +63,7 @@ func (c S3ApiController) PutBucketTagging(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutBucketTagging(ctx.RequestCtx(), bucket, tagging)
+	err = c.be.PutBucketTagging(ctx.Context(), bucket, tagging)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -121,7 +121,7 @@ func (c S3ApiController) PutBucketOwnershipControls(ctx fiber.Ctx) (*Response, e
 		}, s3err.GetAPIError(s3err.ErrMalformedXML)
 	}
 
-	err := c.be.PutBucketOwnershipControls(ctx.RequestCtx(), bucket, ownershipControls.Rules[0].ObjectOwnership)
+	err := c.be.PutBucketOwnershipControls(ctx.Context(), bucket, ownershipControls.Rules[0].ObjectOwnership)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -174,7 +174,7 @@ func (c S3ApiController) PutBucketVersioning(ctx fiber.Ctx) (*Response, error) {
 		}, s3err.GetAPIError(s3err.ErrMalformedXML)
 	}
 
-	err = c.be.PutBucketVersioning(ctx.RequestCtx(), bucket, versioningConf.Status)
+	err = c.be.PutBucketVersioning(ctx.Context(), bucket, versioningConf.Status)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -214,7 +214,7 @@ func (c S3ApiController) PutObjectLockConfiguration(ctx fiber.Ctx) (*Response, e
 		}, err
 	}
 
-	err = c.be.PutObjectLockConfiguration(ctx.RequestCtx(), bucket, config)
+	err = c.be.PutObjectLockConfiguration(ctx.Context(), bucket, config)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -269,7 +269,7 @@ func (c S3ApiController) PutBucketCors(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutBucketCors(ctx.RequestCtx(), bucket, body)
+	err = c.be.PutBucketCors(ctx.Context(), bucket, body)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -331,7 +331,7 @@ func (c S3ApiController) PutBucketWebsite(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutBucketWebsite(ctx.RequestCtx(), bucket, body)
+	err = c.be.PutBucketWebsite(ctx.Context(), bucket, body)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -370,7 +370,7 @@ func (c S3ApiController) PutBucketPolicy(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutBucketPolicy(ctx.RequestCtx(), bucket, ctx.BodyRaw())
+	err = c.be.PutBucketPolicy(ctx.Context(), bucket, ctx.BodyRaw())
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -430,7 +430,7 @@ func (c S3ApiController) PutBucketAcl(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	ownership, err := c.be.GetBucketOwnershipControls(ctx.RequestCtx(), bucket)
+	ownership, err := c.be.GetBucketOwnershipControls(ctx.Context(), bucket)
 	if err != nil && !errors.Is(err, s3err.GetAPIError(s3err.ErrOwnershipControlsNotFound)) {
 		return &Response{
 			MetaOpts: &MetaOptions{
@@ -538,7 +538,7 @@ func (c S3ApiController) PutBucketAcl(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutBucketAcl(ctx.RequestCtx(), bucket, updAcl)
+	err = c.be.PutBucketAcl(ctx.Context(), bucket, updAcl)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -698,7 +698,7 @@ func (c S3ApiController) CreateBucket(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.CreateBucket(ctx.RequestCtx(), &s3.CreateBucketInput{
+	err = c.be.CreateBucket(ctx.Context(), &s3.CreateBucketInput{
 		Bucket:                     &bucket,
 		ObjectOwnership:            objectOwnership,
 		ObjectLockEnabledForBucket: &lockEnabled,

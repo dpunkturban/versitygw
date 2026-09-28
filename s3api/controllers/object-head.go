@@ -138,7 +138,7 @@ func (c S3ApiController) HeadObject(ctx fiber.Ctx) (*Response, error) {
 
 	conditionalHeaders := utils.ParsePreconditionHeaders(ctx)
 
-	res, err := c.be.HeadObject(ctx.RequestCtx(),
+	res, err := c.be.HeadObject(ctx.Context(),
 		&s3.HeadObjectInput{
 			Bucket:            &bucket,
 			Key:               &key,
