@@ -65,7 +65,7 @@ func (s S3ApiController) CORSOptions(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	cors, err := s.be.GetBucketCors(ctx.RequestCtx(), bucket)
+	cors, err := s.be.GetBucketCors(ctx.Context(), bucket)
 	if err != nil {
 		debuglogger.Logf("failed to get bucket cors: %v", err)
 		if errors.Is(err, s3err.GetAPIError(s3err.ErrNoSuchCORSConfiguration)) {

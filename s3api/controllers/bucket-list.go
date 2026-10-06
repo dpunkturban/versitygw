@@ -56,7 +56,7 @@ func (c S3ApiController) ListBuckets(ctx fiber.Ctx) (*Response, error) {
 	}
 
 	// IsAdmin is the backends' "return every bucket, unfiltered" flag.
-	res, err := c.be.ListBuckets(ctx.RequestCtx(),
+	res, err := c.be.ListBuckets(ctx.Context(),
 		s3response.ListBucketsInput{
 			Owner:             owner,
 			IsAdmin:           listAll,

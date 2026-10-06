@@ -15,6 +15,7 @@
 package s3api
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -35,6 +36,8 @@ type S3AdminServer struct {
 	app             *fiber.App
 	backend         backend.Backend
 	router          *S3AdminRouter
+	lifetime        context.Context
+	stopLifetime    context.CancelFunc
 	CertStorage     *netutil.CertStorage
 	quiet           bool
 	debug           bool
@@ -74,12 +77,16 @@ func NewAdminServer(be backend.Backend, root middlewares.RootUserConfig, region 
 	})
 
 	server.app = app
+	server.lifetime, server.stopLifetime = context.WithCancel(context.Background())
 
 	app.Use("*", recover.New(
 		recover.Config{
 			EnableStackTrace:  true,
 			StackTraceHandler: stackTraceHandler,
 		}))
+
+	// the context the handlers pass to the backend, see s3api.New
+	app.Use("*", middlewares.RequestContext(server.lifetime))
 
 	// Logging middlewares
 	if !server.quiet {
@@ -216,7 +223,12 @@ func (sa *S3AdminServer) ServeMultiPort(ports []string) error {
 	})
 }
 
-// ShutDown gracefully shuts down the server with a context timeout
+// Shutdown gracefully shuts down the server with a context timeout, then
+// cancels the backend work of the requests that did not finish in time.
 func (sa S3AdminServer) Shutdown() error {
-	return sa.app.ShutdownWithTimeout(shutDownDuration)
+	err := sa.app.ShutdownWithTimeout(shutDownDuration)
+	if sa.stopLifetime != nil {
+		sa.stopLifetime()
+	}
+	return err
 }

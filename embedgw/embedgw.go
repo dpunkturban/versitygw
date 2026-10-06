@@ -32,6 +32,7 @@ import (
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/versity/versitygw/auth"
 	"github.com/versity/versitygw/backend"
@@ -142,6 +143,10 @@ type Config struct {
 	Readonly bool
 	// KeepAlive enables HTTP keep-alive on S3 API connections.
 	KeepAlive bool
+	// ShutdownTimeout is how long the S3 API server waits for in-flight
+	// requests to finish on shutdown before it cancels their backend work.
+	// Zero keeps the default of 10 seconds.
+	ShutdownTimeout time.Duration
 	// DisableACLs disables ACL enforcement at the gateway level. All ACL
 	// headers on requests are ignored and no access control is enforced via
 	// bucket ACLs. PutBucketAcl returns AccessControlListNotSupported.
@@ -788,6 +793,9 @@ func RunVersityGW(ctx context.Context, be backend.Backend, cfg *Config) error {
 	}
 	if cfg.KeepAlive {
 		opts = append(opts, s3api.WithKeepAlive())
+	}
+	if cfg.ShutdownTimeout > 0 {
+		opts = append(opts, s3api.WithShutdownTimeout(cfg.ShutdownTimeout))
 	}
 	if cfg.DisableACLs {
 		opts = append(opts, s3api.WithDisableACL())

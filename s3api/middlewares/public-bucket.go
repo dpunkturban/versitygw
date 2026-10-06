@@ -206,7 +206,7 @@ func verifyAnonymousUploadLock(ctx fiber.Ctx, be backend.Backend, bucket string)
 	}
 
 	explicit := objLock.LegalHoldStatus != "" || objLock.ObjectLockMode != ""
-	locked, err := auth.VerifyWriteObjectLock(ctx.RequestCtx(), be, bucket, explicit)
+	locked, err := auth.VerifyWriteObjectLock(ctx.Context(), be, bucket, explicit)
 	if err != nil || !locked {
 		return err
 	}

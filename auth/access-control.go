@@ -62,7 +62,7 @@ func VerifyObjectCopyAccess(ctx fiber.Ctx, be backend.Backend, copySource string
 	}
 
 	// Get source bucket ACL
-	srcBucketACLBytes, err := be.GetBucketAcl(ctx.RequestCtx(), &s3.GetBucketAclInput{Bucket: &srcBucket})
+	srcBucketACLBytes, err := be.GetBucketAcl(ctx.Context(), &s3.GetBucketAclInput{Bucket: &srcBucket})
 	if err != nil {
 		return err
 	}
@@ -117,7 +117,7 @@ func VerifyAccess(ctx fiber.Ctx, be backend.Backend, opts AccessOptions) error {
 		return err
 	}
 
-	errs, err := objectsAccessErrors(ctx.RequestCtx(), be, opts, []string{opts.Object}, requestConditionContext(ctx, opts.Actions))
+	errs, err := objectsAccessErrors(ctx.Context(), be, opts, []string{opts.Object}, requestConditionContext(ctx, opts.Actions))
 	if err != nil {
 		return err
 	}
@@ -163,7 +163,7 @@ func VerifyObjectsAccess(ctx fiber.Ctx, be backend.Backend, opts AccessOptions, 
 		return nil, nil
 	}
 
-	rctx := ctx.RequestCtx()
+	rctx := ctx.Context()
 	// A DeleteObjects batch reads no If-Match/If-None-Match, so no
 	// conditional-write key applies to any object in it.
 	condCtx := requestConditionContext(ctx, nil)
@@ -506,7 +506,7 @@ func objectPolicyArn(bucket, object string, normalizeObjectKey objectKeyNormaliz
 // explicit public Deny of any one action denies the request, whatever the
 // ACL grants.
 func VerifyPublicAccess(ctx fiber.Ctx, be backend.Backend, actions []Action, permission Permission, bucket, object string) error {
-	policy, err := be.GetBucketPolicy(ctx.RequestCtx(), bucket)
+	policy, err := be.GetBucketPolicy(ctx.Context(), bucket)
 	if err != nil && !errors.Is(err, s3err.GetAPIError(s3err.ErrNoSuchBucketPolicy)) {
 		return err
 	}
@@ -551,7 +551,7 @@ func VerifyPublicAccess(ctx fiber.Ctx, be backend.Backend, actions []Action, per
 
 	// An ACL grants a permission on the whole bucket rather than an action
 	// on an object, so one lookup decides every action left to it.
-	if err := VerifyPublicBucketACL(ctx.RequestCtx(), be, bucket, permission); err != nil {
+	if err := VerifyPublicBucketACL(ctx.Context(), be, bucket, permission); err != nil {
 		return s3err.GetAPIError(s3err.ErrAccessDenied)
 	}
 

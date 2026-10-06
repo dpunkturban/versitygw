@@ -15,11 +15,15 @@
 package s3api
 
 import (
+	"context"
+	"errors"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -191,7 +195,7 @@ func TestWithRouteRegistersAfterRateLimiter(t *testing.T) {
 			firstDone <- err
 			return
 		}
-		defer resp.Body.Close()
+		defer func() { _ = resp.Body.Close() }()
 		if resp.StatusCode != http.StatusNoContent {
 			firstDone <- fiber.NewError(resp.StatusCode)
 			return
@@ -283,6 +287,206 @@ func TestCustomMountValidation(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tt.wantErr) {
 				t.Fatalf("New() error = %v, want substring %q", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+// serveForTest serves sa on a kernel-chosen loopback port and returns its
+// address. The server is shut down when the test ends unless the test already
+// did so.
+func serveForTest(t *testing.T, sa *S3ApiServer) string {
+	t.Helper()
+
+	got := make(chan []net.Addr, 1)
+	sa.onListenAddrs = func(addrs []net.Addr) { got <- addrs }
+	served := make(chan error, 1)
+	go func() { served <- sa.ServeMultiPort([]string{"127.0.0.1:0"}) }()
+
+	select {
+	case addrs := <-got:
+		t.Cleanup(func() { _ = sa.ShutDown() })
+		return addrs[0].String()
+	case err := <-served:
+		t.Fatalf("ServeMultiPort() returned before the listen hook fired: %v", err)
+	case <-time.After(10 * time.Second):
+		t.Fatal("listen hook did not fire")
+	}
+	return ""
+}
+
+// A request that is running when ShutDown starts must finish: its context is
+// not canceled by the start of the drain, the client gets its response, and
+// ShutDown returns as soon as the request is done, not after the timeout.
+func TestShutDownDrainsInFlightRequest(t *testing.T) {
+	const timeout = 10 * time.Second
+	const handlerRuntime = 500 * time.Millisecond
+
+	entered := make(chan struct{})
+	var canceledEarly atomic.Bool
+	sa, err := newTestS3ApiServer(
+		WithShutdownTimeout(timeout),
+		WithRoute(http.MethodGet, "/slow", func(ctx fiber.Ctx) error {
+			close(entered)
+			deadline := time.Now().Add(handlerRuntime)
+			for time.Now().Before(deadline) {
+				if ctx.Context().Err() != nil {
+					canceledEarly.Store(true)
+					return ctx.SendStatus(http.StatusServiceUnavailable)
+				}
+				time.Sleep(10 * time.Millisecond)
+			}
+			return ctx.SendString("done")
+		}),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	addr := serveForTest(t, sa)
+
+	type result struct {
+		resp *http.Response
+		body string
+		err  error
+	}
+	got := make(chan result, 1)
+	go func() {
+		resp, err := http.Get("http://" + addr + "/slow")
+		if err != nil {
+			got <- result{err: err}
+			return
+		}
+		defer func() { _ = resp.Body.Close() }()
+		body, _ := io.ReadAll(resp.Body)
+		got <- result{resp: resp, body: string(body)}
+	}()
+
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the request did not reach the handler")
+	}
+
+	start := time.Now()
+	if err := sa.ShutDown(); err != nil {
+		t.Fatalf("ShutDown() error = %v, want nil: the request should have finished within the timeout", err)
+	}
+	drained := time.Since(start)
+
+	r := <-got
+	if r.err != nil {
+		t.Fatalf("request failed: %v", r.err)
+	}
+	if r.resp.StatusCode != http.StatusOK || r.body != "done" {
+		t.Fatalf("got %d %q, want 200 \"done\"", r.resp.StatusCode, r.body)
+	}
+	if canceledEarly.Load() {
+		t.Fatal("the request context was canceled when the drain started")
+	}
+	if drained >= timeout {
+		t.Fatalf("ShutDown() took %v, want it to return once the request finished, before the %v timeout", drained, timeout)
+	}
+	if ctx := sa.lifetime; ctx.Err() == nil {
+		t.Fatal("the lifetime context is still open after ShutDown()")
+	}
+}
+
+// A request that is still running when the timeout passes must be cut off:
+// ShutDown reports the timeout, and the request context is canceled so the
+// backend work it started stops.
+func TestShutDownCancelsRequestsAfterTheTimeout(t *testing.T) {
+	const timeout = 300 * time.Millisecond
+
+	entered := make(chan struct{})
+	canceledAfter := make(chan time.Duration, 1)
+	sa, err := newTestS3ApiServer(
+		WithShutdownTimeout(timeout),
+		WithRoute(http.MethodGet, "/stuck", func(ctx fiber.Ctx) error {
+			start := time.Now()
+			close(entered)
+			<-ctx.Context().Done()
+			canceledAfter <- time.Since(start)
+			return ctx.SendStatus(http.StatusServiceUnavailable)
+		}),
+	)
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	addr := serveForTest(t, sa)
+
+	go func() {
+		resp, err := http.Get("http://" + addr + "/stuck")
+		if err == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	select {
+	case <-entered:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the request did not reach the handler")
+	}
+
+	start := time.Now()
+	err = sa.ShutDown()
+	drained := time.Since(start)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("ShutDown() error = %v, want context.DeadlineExceeded", err)
+	}
+	if drained < timeout {
+		t.Fatalf("ShutDown() returned after %v, before the %v timeout", drained, timeout)
+	}
+
+	select {
+	case elapsed := <-canceledAfter:
+		if elapsed < timeout {
+			t.Fatalf("the request context was canceled after %v, before the %v timeout", elapsed, timeout)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the request context was never canceled")
+	}
+}
+
+// With nothing in flight, ShutDown returns at once whatever the timeout is:
+// the drain costs time only when there is work to drain.
+func TestShutDownReturnsAtOnceWhenIdle(t *testing.T) {
+	sa, err := newTestS3ApiServer(WithShutdownTimeout(time.Hour))
+	if err != nil {
+		t.Fatalf("New() error = %v", err)
+	}
+	serveForTest(t, sa)
+
+	start := time.Now()
+	if err := sa.ShutDown(); err != nil {
+		t.Fatalf("ShutDown() error = %v", err)
+	}
+	if took := time.Since(start); took > 5*time.Second {
+		t.Fatalf("ShutDown() took %v on an idle server", took)
+	}
+}
+
+func TestWithShutdownTimeout(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		set  time.Duration
+		want time.Duration
+	}{
+		{name: "default", want: shutDownDuration},
+		{name: "custom", set: time.Minute, want: time.Minute},
+		{name: "zero keeps the default", set: 0, want: shutDownDuration},
+		{name: "negative keeps the default", set: -time.Second, want: shutDownDuration},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var opts []Option
+			if tt.name != "default" {
+				opts = append(opts, WithShutdownTimeout(tt.set))
+			}
+			sa, err := newTestS3ApiServer(opts...)
+			if err != nil {
+				t.Fatalf("New() error = %v", err)
+			}
+			if sa.shutdownTimeout != tt.want {
+				t.Fatalf("shutdownTimeout = %v, want %v", sa.shutdownTimeout, tt.want)
 			}
 		})
 	}

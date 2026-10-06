@@ -212,7 +212,7 @@ func ParseObjectLockRetentionInputToJSON(input *s3response.PutObjectRetentionInp
 // IsObjectLockRetentionPutAllowed checks if the object lock retention PUT request
 // is allowed against the current state of the object lock
 func IsObjectLockRetentionPutAllowed(ctx fiber.Ctx, be backend.Backend, iam IAMService, bucket, object, versionId string, acc Account, input *s3response.PutObjectRetentionInput, bypass bool) error {
-	ret, err := be.GetObjectRetention(ctx.RequestCtx(), bucket, object, versionId)
+	ret, err := be.GetObjectRetention(ctx.Context(), bucket, object, versionId)
 	if errors.Is(err, s3err.GetAPIError(s3err.ErrNoSuchObjectLockConfiguration)) {
 		// if object lock configuration is not set
 		// allow the retention modification without any checks
@@ -264,7 +264,7 @@ func IsObjectLockRetentionPutAllowed(ctx fiber.Ctx, be backend.Backend, iam IAMS
 	// or switching it to COMPLIANCE — with the bypass header. That needs
 	// s3:BypassGovernanceRetention, via the bucket policy and/or (when
 	// configured) the IAM identity policy.
-	if err := verifyBypassGovernancePermission(ctx.RequestCtx(), be, iam, acc, bucket, object, BypassRequested, false, requestConditionContext(ctx, []Action{BypassGovernanceRetentionAction})); err != nil {
+	if err := verifyBypassGovernancePermission(ctx.Context(), be, iam, acc, bucket, object, BypassRequested, false, requestConditionContext(ctx, []Action{BypassGovernanceRetentionAction})); err != nil {
 		debuglogger.Logf("the user is missing 's3:BypassGovernanceRetention' permission: %v", err)
 		return err
 	}
@@ -417,7 +417,7 @@ func ParseObjectLegalHoldOutput(status *bool) *s3response.GetObjectLegalHoldResu
 // VerifyObjectsAccess instead, which folds this together with the
 // authorization check into one pass.
 func CheckObjectAccess(ctx fiber.Ctx, bucket string, acc Account, objects []types.ObjectIdentifier, bypass BypassMode, isBucketPublic bool, be backend.Backend, iam IAMService, isOverwrite bool) error {
-	rctx := ctx.RequestCtx()
+	rctx := ctx.Context()
 	state, err := loadObjectLockState(rctx, be, bucket, isOverwrite)
 	if err != nil || !state.applies {
 		return err

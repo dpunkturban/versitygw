@@ -68,7 +68,7 @@ func (c S3ApiController) RestoreObject(ctx fiber.Ctx) (*Response, error) {
 		}, s3err.GetAPIError(s3err.ErrMalformedXML)
 	}
 
-	err = c.be.RestoreObject(ctx.RequestCtx(), &s3.RestoreObjectInput{
+	err = c.be.RestoreObject(ctx.Context(), &s3.RestoreObjectInput{
 		Bucket:         &bucket,
 		Key:            &key,
 		RestoreRequest: &restoreRequest,
@@ -119,7 +119,7 @@ func (c S3ApiController) SelectObjectContent(ctx fiber.Ctx) (*Response, error) {
 		}, s3err.GetAPIError(s3err.ErrMalformedXML)
 	}
 
-	sw := c.be.SelectObjectContent(ctx.RequestCtx(),
+	sw := c.be.SelectObjectContent(ctx.Context(),
 		&s3.SelectObjectContentInput{
 			Bucket:              &bucket,
 			Key:                 &key,
@@ -219,7 +219,7 @@ func (c S3ApiController) CreateMultipartUpload(ctx fiber.Ctx) (*Response, error)
 
 	// lock headers need a bucket with Object Lock
 	if objLockState.LegalHoldStatus != "" || objLockState.ObjectLockMode != "" {
-		if _, err := auth.VerifyWriteObjectLock(ctx.RequestCtx(), c.be, bucket, true); err != nil {
+		if _, err := auth.VerifyWriteObjectLock(ctx.Context(), c.be, bucket, true); err != nil {
 			return &Response{
 				MetaOpts: &MetaOptions{
 					BucketOwner: parsedAcl.Owner,
@@ -228,7 +228,7 @@ func (c S3ApiController) CreateMultipartUpload(ctx fiber.Ctx) (*Response, error)
 		}
 	}
 
-	res, err := c.be.CreateMultipartUpload(ctx.RequestCtx(),
+	res, err := c.be.CreateMultipartUpload(ctx.Context(),
 		s3response.CreateMultipartUploadInput{
 			Bucket:                    &bucket,
 			Key:                       &key,
@@ -368,7 +368,7 @@ func (c S3ApiController) CompleteMultipartUpload(ctx fiber.Ctx) (*Response, erro
 		}, err
 	}
 
-	res, versid, err := c.be.CompleteMultipartUpload(ctx.RequestCtx(),
+	res, versid, err := c.be.CompleteMultipartUpload(ctx.Context(),
 		&s3.CompleteMultipartUploadInput{
 			Bucket:   &bucket,
 			Key:      &key,

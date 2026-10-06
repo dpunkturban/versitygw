@@ -47,7 +47,7 @@ func (c S3ApiController) DeleteBucketTagging(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.DeleteBucketTagging(ctx.RequestCtx(), bucket)
+	err = c.be.DeleteBucketTagging(ctx.Context(), bucket)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -79,7 +79,7 @@ func (c S3ApiController) DeleteBucketOwnershipControls(ctx fiber.Ctx) (*Response
 		}, err
 	}
 
-	err = c.be.DeleteBucketOwnershipControls(ctx.RequestCtx(), bucket)
+	err = c.be.DeleteBucketOwnershipControls(ctx.Context(), bucket)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -111,7 +111,7 @@ func (c S3ApiController) DeleteBucketPolicy(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.DeleteBucketPolicy(ctx.RequestCtx(), bucket)
+	err = c.be.DeleteBucketPolicy(ctx.Context(), bucket)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -145,7 +145,7 @@ func (c S3ApiController) DeleteBucketCors(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.DeleteBucketCors(ctx.RequestCtx(), bucket)
+	err = c.be.DeleteBucketCors(ctx.Context(), bucket)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -179,7 +179,7 @@ func (c S3ApiController) DeleteBucketWebsite(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.DeleteBucketWebsite(ctx.RequestCtx(), bucket)
+	err = c.be.DeleteBucketWebsite(ctx.Context(), bucket)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -213,7 +213,7 @@ func (c S3ApiController) DeleteBucket(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.DeleteBucket(ctx.RequestCtx(), bucket)
+	err = c.be.DeleteBucket(ctx.Context(), bucket)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,

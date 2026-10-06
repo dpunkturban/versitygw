@@ -15,6 +15,7 @@
 package s3api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -62,6 +63,12 @@ type S3ApiServer struct {
 	socketPerm       os.FileMode
 	onListen         func()
 	onListenAddrs    func(addrs []net.Addr)
+	shutdownTimeout  time.Duration
+	// lifetime is the context the handlers pass to the backend. ShutDown
+	// cancels it through stopLifetime once the drain timeout has passed, so
+	// in-flight requests keep running while the server drains.
+	lifetime     context.Context
+	stopLifetime context.CancelFunc
 }
 
 type routeMount struct {
@@ -87,7 +94,8 @@ func New(
 	opts ...Option,
 ) (*S3ApiServer, error) {
 	server := &S3ApiServer{
-		backend: be,
+		backend:         be,
+		shutdownTimeout: shutDownDuration,
 		Router: &S3ApiRouter{
 			be:      be,
 			iam:     iam,
@@ -103,6 +111,8 @@ func New(
 	for _, opt := range opts {
 		opt(server)
 	}
+
+	server.lifetime, server.stopLifetime = context.WithCancel(context.Background())
 
 	app := fiber.New(fiber.Config{
 		AppName:           "versitygw",
@@ -131,6 +141,11 @@ func New(
 	// recovery and before every route, so it wraps all of them and a panic in
 	// the drain itself is still recovered
 	app.Use("*", middlewares.DrainRequestBody())
+
+	// initialize the context the handlers pass to the backend. it goes before
+	// every route, so every handler sees it. shutdown cancels it only after
+	// the drain timeout, not when the drain starts
+	app.Use("*", middlewares.RequestContext(server.lifetime))
 
 	// Logging middlewares
 	if !server.quiet {
@@ -290,6 +305,17 @@ func WithKeepAlive() Option {
 	return func(s *S3ApiServer) { s.keepAlive = true }
 }
 
+// WithShutdownTimeout sets how long ShutDown waits for in-flight requests
+// before it cancels the work they still have running in the backend. The
+// default is 10 seconds. A value of zero or less keeps the default.
+func WithShutdownTimeout(d time.Duration) Option {
+	return func(s *S3ApiServer) {
+		if d > 0 {
+			s.shutdownTimeout = d
+		}
+	}
+}
+
 // WithCORSAllowOrigin sets the default CORS Access-Control-Allow-Origin value.
 // This is applied when no bucket CORS configuration exists, and for admin APIs.
 func WithCORSAllowOrigin(origin string) Option {
@@ -424,9 +450,16 @@ func (sa *S3ApiServer) ServeMultiPort(ports []string) error {
 	})
 }
 
-// ShutDown gracefully shuts down the server with a context timeout
+// ShutDown gracefully shuts down the server. It stops accepting new
+// connections, waits up to the shutdown timeout for in-flight requests to
+// finish, and then cancels the context of the requests that are still
+// running so their backend work stops instead of outliving the server.
 func (sa *S3ApiServer) ShutDown() error {
-	return sa.app.ShutdownWithTimeout(shutDownDuration)
+	err := sa.app.ShutdownWithTimeout(sa.shutdownTimeout)
+	if sa.stopLifetime != nil {
+		sa.stopLifetime()
+	}
+	return err
 }
 
 // stackTraceHandler stores the system panics

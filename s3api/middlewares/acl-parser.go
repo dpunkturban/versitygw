@@ -28,7 +28,7 @@ import (
 func ParseAcl(be backend.Backend) fiber.Handler {
 	return func(ctx fiber.Ctx) error {
 		bucket := ctx.Params("bucket")
-		data, err := be.GetBucketAcl(ctx.RequestCtx(), &s3.GetBucketAclInput{Bucket: &bucket})
+		data, err := be.GetBucketAcl(ctx.Context(), &s3.GetBucketAclInput{Bucket: &bucket})
 		if err != nil {
 			return err
 		}

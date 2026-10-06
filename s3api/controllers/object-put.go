@@ -83,7 +83,7 @@ func (c S3ApiController) PutObjectTagging(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutObjectTagging(ctx.RequestCtx(), bucket, key, versionId, tagging)
+	err = c.be.PutObjectTagging(ctx.Context(), bucket, key, versionId, tagging)
 	return &Response{
 		Headers: map[string]*string{
 			"x-amz-version-id": &versionId,
@@ -161,7 +161,7 @@ func (c S3ApiController) PutObjectRetention(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutObjectRetention(ctx.RequestCtx(), bucket, key, versionId, data)
+	err = c.be.PutObjectRetention(ctx.Context(), bucket, key, versionId, data)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -223,7 +223,7 @@ func (c S3ApiController) PutObjectLegalHold(ctx fiber.Ctx) (*Response, error) {
 		}, s3err.GetAPIError(s3err.ErrMalformedXML)
 	}
 
-	err = c.be.PutObjectLegalHold(ctx.RequestCtx(), bucket, key, versionId, legalHold.Status == types.ObjectLockLegalHoldStatusOn)
+	err = c.be.PutObjectLegalHold(ctx.Context(), bucket, key, versionId, legalHold.Status == types.ObjectLockLegalHoldStatusOn)
 	return &Response{
 		MetaOpts: &MetaOptions{
 			BucketOwner: parsedAcl.Owner,
@@ -321,7 +321,7 @@ func (c S3ApiController) UploadPart(ctx fiber.Ctx) (*Response, error) {
 		body = utils.NewContentLengthReader(body, contentLength)
 	}
 
-	res, err := c.be.UploadPart(ctx.RequestCtx(),
+	res, err := c.be.UploadPart(ctx.Context(),
 		&s3.UploadPartInput{
 			Bucket:            &bucket,
 			Key:               &key,
@@ -430,7 +430,7 @@ func (c S3ApiController) UploadPartCopy(ctx fiber.Ctx) (*Response, error) {
 
 	preconditionHdrs := utils.ParsePreconditionHeaders(ctx, utils.WithCopySource())
 
-	resp, err := c.be.UploadPartCopy(ctx.RequestCtx(),
+	resp, err := c.be.UploadPartCopy(ctx.Context(),
 		&s3.UploadPartCopyInput{
 			Bucket:                      &bucket,
 			Key:                         &key,
@@ -491,7 +491,7 @@ func (c S3ApiController) PutObjectAcl(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.PutObjectAcl(ctx.RequestCtx(), &s3.PutObjectAclInput{
+	err = c.be.PutObjectAcl(ctx.Context(), &s3.PutObjectAclInput{
 		Bucket:           &bucket,
 		Key:              &key,
 		GrantFullControl: &grantFullControl,
@@ -629,7 +629,7 @@ func (c S3ApiController) CopyObject(ctx fiber.Ctx) (*Response, error) {
 	// A copy needs no integrity check of its own, but its lock headers still
 	// need a bucket with Object Lock
 	if objLock.LegalHoldStatus != "" || objLock.ObjectLockMode != "" {
-		if _, err := auth.VerifyWriteObjectLock(ctx.RequestCtx(), c.be, bucket, true); err != nil {
+		if _, err := auth.VerifyWriteObjectLock(ctx.Context(), c.be, bucket, true); err != nil {
 			return &Response{
 				MetaOpts: &MetaOptions{
 					BucketOwner: parsedAcl.Owner,
@@ -649,7 +649,7 @@ func (c S3ApiController) CopyObject(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	res, err := c.be.CopyObject(ctx.RequestCtx(),
+	res, err := c.be.CopyObject(ctx.Context(),
 		s3response.CopyObjectInput{
 			Bucket:                      &bucket,
 			Key:                         &key,
@@ -810,7 +810,7 @@ func (c S3ApiController) PutObject(ctx fiber.Ctx) (*Response, error) {
 	explicitLock := objLock.LegalHoldStatus != "" || objLock.ObjectLockMode != ""
 	hasIntegrityCheck := utils.HasPayloadIntegrityCheck(ctx)
 	if !IsBucketPublic && (explicitLock || !hasIntegrityCheck) {
-		locked, err := auth.VerifyWriteObjectLock(ctx.RequestCtx(), c.be, bucket, explicitLock)
+		locked, err := auth.VerifyWriteObjectLock(ctx.Context(), c.be, bucket, explicitLock)
 		if err == nil && locked && !hasIntegrityCheck {
 			err = s3err.GetAPIError(s3err.ErrObjectLockChecksumRequired)
 		}
@@ -851,7 +851,7 @@ func (c S3ApiController) PutObject(ctx fiber.Ctx) (*Response, error) {
 
 	ifMatch, ifNoneMatch := utils.ParsePreconditionMatchHeaders(ctx)
 
-	res, err := c.be.PutObject(ctx.RequestCtx(),
+	res, err := c.be.PutObject(ctx.Context(),
 		s3response.PutObjectInput{
 			Bucket:                    &bucket,
 			Key:                       &key,

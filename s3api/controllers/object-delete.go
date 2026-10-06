@@ -68,7 +68,7 @@ func (c S3ApiController) DeleteObjectTagging(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	err = c.be.DeleteObjectTagging(ctx.RequestCtx(), bucket, key, versionId)
+	err = c.be.DeleteObjectTagging(ctx.Context(), bucket, key, versionId)
 	return &Response{
 		Headers: map[string]*string{
 			"x-amz-version-id": &versionId,
@@ -110,7 +110,7 @@ func (c S3ApiController) AbortMultipartUpload(ctx fiber.Ctx) (*Response, error) 
 		}, err
 	}
 
-	err = c.be.AbortMultipartUpload(ctx.RequestCtx(),
+	err = c.be.AbortMultipartUpload(ctx.Context(),
 		&s3.AbortMultipartUploadInput{
 			UploadId:             &uploadId,
 			Bucket:               &bucket,
@@ -195,7 +195,7 @@ func (c S3ApiController) DeleteObject(ctx fiber.Ctx) (*Response, error) {
 		}, err
 	}
 
-	res, err := c.be.DeleteObject(ctx.RequestCtx(),
+	res, err := c.be.DeleteObject(ctx.Context(),
 		&s3.DeleteObjectInput{
 			Bucket:                  &bucket,
 			Key:                     &key,
